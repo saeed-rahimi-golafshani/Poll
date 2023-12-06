@@ -2,6 +2,8 @@ const express = require("express");
 const dotenv = require("dotenv");
 const dataBase_Config = require("./Src/Config/Mongoose.Config");
 const notFoundHandler = require("./Src/Common/Exception/notFound.Handler");
+const allExceptionHandler = require("./Src/Common/Exception/All_Exception.Handler")
+const { MainRouter } = require("./Src/App.Routes");
 
 dotenv.config();
 async function main(){
@@ -11,6 +13,7 @@ async function main(){
     app.use(express.json());
     app.use(express.urlencoded({extended: true}));
     dataBase_Config();
+    app.use(MainRouter)
     notFoundHandler(app);
     allExceptionHandler(app)
 
