@@ -5,6 +5,8 @@ const { convertGregorianDateToPersionDateToToday } = require("../../Common/Const
 const { ActivationModel } = require("./ActivationModel");
 const createHttpError = require("http-errors");
 const AuthMessage = require("./Auth.Message");
+const jwt = require("jsonwebtoken");
+require("dotenv").config();
 
 
 class AuthService{
@@ -15,7 +17,7 @@ class AuthService{
         this.#model = UserModel;
         this.#ActivationModel = ActivationModel
    }
-    async sendotp(mobile){
+    async sendOtp(mobile){
         const user = await this.#model.findOne({mobile});
         const createTime = convertGregorianDateToPersionDateToToday();
         const updateTime = convertGregorianDateToPersionDateToToday();
@@ -49,6 +51,26 @@ class AuthService{
         await user.save();
         return user
     };
+    async checkOtp(mobile, code){
+        const user = await this.checkExistUserByMobile(mobile);
+        const userActivation = await this.#ActivationModel.findOne({userId: user._id});
+        const now = new Date().getTime();
+        if(userActivation?.otp?.expiresIn < now) throw new createHttpError.Unauthorized(AuthMessage.OtpCodeExpired);
+        if(userActivation?.otp?.code != code) throw new createHttpError.Unauthorized(AuthMessage.otpCodeIsNotIncorrect);
+        if(!user.Phone_verification){
+            user.Phone_verification = true
+        };
+        const accessToken = this.signToken({mobile, id: user._id});
+        return accessToken
+    };
+    async checkExistUserByMobile(mobile){
+        const user = await this.#model.findOne({mobile});
+        if(!user) throw new createHttpError.NotFound(AuthMessage.AuthNotFound);
+        return user
+    };
+    signToken(payload){
+        return jwt.sign(payload, process.env.JWT_SECRET_KEY, {expiresIn: process.env.TOKEN_EXPIRESIN_TIME})
+    }
 }
 
 module.exports = {
